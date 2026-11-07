@@ -1,0 +1,2 @@
+# Pass --config .cargo/config.local.toml to use an adjacent RackForge checkout.
+paths = ["../rackforge/crates/rackforge-plugin-sdk", "../rackforge/crates/rackforge-plugin-runtime"]

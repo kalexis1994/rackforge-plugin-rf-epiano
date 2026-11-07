@@ -1,0 +1,23 @@
+RF-EPiano — GPL-3.0-or-later
+
+Sound engine: OpenWurli, by hal0zer0 and contributors, version 0.9.1,
+commit c05403b9b60f95b4908ae19727682e81803a7351.
+https://github.com/hal0zer0/openwurli
+
+RF-EPiano adds a RackForge adapter and a prepared silent-state reset to
+the vendored DSP. It exposes the existing reed swing multiplier for the 200A
+Bark program. The upstream synthesis and circuit calculations are unchanged.
+The bundled engine uses melange-primitives (upstream pin 7ecb36c7).
+https://github.com/hal0zer0/melange
+
+RackForge plugin SDK: MIT OR Apache-2.0, revision
+7a14c68aa208290587d985d606b0dbc17600ee07.
+https://github.com/kalexis1994/rackforge/tree/7a14c68aa208290587d985d606b0dbc17600ee07/crates/rackforge-plugin-sdk
+
+Typography: Barlow Semi Condensed by Jeremy Tribby and the Barlow Project
+Authors, distributed under the SIL Open Font License 1.1 (Barlow-OFL.txt).
+Source revision dc2940e2e04ef4ec96c07e23e0f02aefbddd343b.
+https://github.com/jpt/barlow
+
+The companion RF-EPiano 0.1.4 source archive contains the adapter,
+vendored DSP, upstream notices, locked dependency pins and build instructions.

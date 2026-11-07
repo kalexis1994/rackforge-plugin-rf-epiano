@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "pages": [{ "id": "sound", "name": "Sound", "order": 0 }],
+  "parameters": [
+    { "index": 0, "id": "volume", "name": "Volume", "page": "sound", "order": 0,
+      "kind": { "type": "float", "minimum": 0.0, "maximum": 1.0, "default": 0.8, "step": 0.001 },
+      "flags": { "automatable": true, "modulatable": true, "read_only": false, "advanced": false }, "suggested_control": "knob" },
+    { "index": 1, "id": "tremolo", "name": "Tremolo", "page": "sound", "order": 1,
+      "kind": { "type": "float", "minimum": 0.0, "maximum": 1.0, "default": 0.5, "step": 0.001 },
+      "flags": { "automatable": true, "modulatable": true, "read_only": false, "advanced": false }, "suggested_control": "knob" },
+    { "index": 2, "id": "speaker", "name": "Speaker", "page": "sound", "order": 2,
+      "kind": { "type": "float", "minimum": 0.0, "maximum": 1.0, "default": 0.0, "step": 0.001 },
+      "flags": { "automatable": true, "modulatable": true, "read_only": false, "advanced": false }, "suggested_control": "knob" }
+  ]
+}

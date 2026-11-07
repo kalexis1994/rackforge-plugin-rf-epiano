@@ -1,0 +1,39 @@
+schema_version = 3
+id = "org.rackforge.rf-epiano"
+name = "RF-EPiano"
+short_name = "RF-EP"
+vendor = "RackForge"
+version = "0.1.4"
+description = "A physically modelled 200A electric piano, powered by OpenWurli."
+kind = "instrument"
+state_version = 1
+capabilities = ["audio_output", "midi_input", "presets", "state", "sample_accurate_automation"]
+
+[api]
+major = 1
+minor = 11
+
+[audio]
+input_buses = []
+output_buses = [{ id = "main", name = "Electric piano", channels = 2, layout = "stereo" }]
+
+[branding]
+icon = "branding/icon.png"
+banner = "branding/banner.png"
+splash = "branding/splash.png"
+background_color = "#131A17"
+accent_color = "#78B38E"
+
+[component]
+abi = "wasm-v1"
+path = "component.wasm"
+runtime_descriptor = "metadata/runtime.json"
+parameter_schema = "metadata/parameters.json"
+preset_catalog = "metadata/presets.json"
+
+[web_ui]
+api_version = 1
+
+[[web_ui.surfaces]]
+kind = "play"
+entry = "web/play.html"

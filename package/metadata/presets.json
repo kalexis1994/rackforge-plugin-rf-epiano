@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "banks": [{ "id": "factory", "name": "Factory", "order": 0 }],
+  "presets": [
+    { "id": "default", "name": "200A Original", "bank": "factory",
+      "description": "Original voicing with tremolo",
+      "category": "Electric Piano", "order": 0, "tags": ["default", "physical-model", "200a"] },
+    { "id": "direct", "name": "200A Direct", "bank": "factory",
+      "description": "Tremolo off, speaker bypassed",
+      "category": "Electric Piano", "order": 1, "tags": ["direct", "200a"] },
+    { "id": "cabinet", "name": "200A Cabinet", "bank": "factory",
+      "description": "Speaker on, tremolo off",
+      "category": "Electric Piano", "order": 2, "tags": ["speaker", "200a"] },
+    { "id": "tremolo", "name": "200A Cabinet Tremolo", "bank": "factory",
+      "description": "Speaker on with 65% tremolo",
+      "category": "Electric Piano", "order": 3, "tags": ["speaker", "tremolo", "200a"] },
+    { "id": "bark", "name": "200A Bark", "bank": "factory",
+      "description": "Stronger reed harmonics, speaker bypassed",
+      "category": "Electric Piano", "order": 4, "tags": ["direct", "bark", "200a"] }
+  ]
+}

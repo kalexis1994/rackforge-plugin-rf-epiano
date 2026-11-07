@@ -1,0 +1,17 @@
+[package]
+name = "rackforge-rf-epiano"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "OpenWurli 200A instrument for the portable RackForge runtime"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+openwurli-dsp.workspace = true
+rackforge-plugin-sdk.workspace = true
+
+[dev-dependencies]
+rackforge-plugin-runtime.workspace = true
+openwurli-reference = { package = "openwurli-dsp", git = "https://github.com/hal0zer0/openwurli", rev = "c05403b9b60f95b4908ae19727682e81803a7351" }
