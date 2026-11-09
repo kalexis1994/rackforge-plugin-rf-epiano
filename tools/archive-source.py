@@ -20,7 +20,7 @@ def main():
                      and "__pycache__" not in p.parts and p.suffix not in {".wasm", ".pyc"})
     with ZipFile(args.output, "x", compression=ZIP_DEFLATED, compresslevel=9) as archive:
         for path in sorted(paths):
-            archive.write(path, f"RF-EPiano-0.1.4/{path.relative_to(ROOT).as_posix()}")
+            archive.write(path, f"RF-EPiano-0.1.5/{path.relative_to(ROOT).as_posix()}")
     with ZipFile(args.output) as archive:
         if archive.testzip() is not None:
             raise RuntimeError("source archive verification failed")

@@ -62,8 +62,8 @@ against the unmodified upstream DSP with sample-positioned MIDI, sustain and
 all three controls. It also exercises state restore and bounded reset. The
 allocation test covers processing notes, pedal events and repeated resets.
 
-The PLAY panel uses green enamel, brushed aluminum, and ivory keys inspired
-by vintage 200A instruments. The dials respond to vertical or horizontal
+The PLAY panel uses green enamel and brushed aluminum inspired by vintage
+200A instruments. The dials respond to vertical or horizontal
 dragging, a tap around the scale, and the keyboard. Barlow Semi Condensed is
 bundled in the package under the SIL Open Font License.
 

@@ -880,7 +880,7 @@ source = "git+https://github.com/kalexis1994/rackforge.git?rev=7a14c68aa20829058
 
 [[package]]
 name = "rackforge-rf-epiano"
-version = "0.1.4"
+version = "0.1.5"
 dependencies = [
  "openwurli-dsp 0.9.1",
  "openwurli-dsp 0.9.1 (git+https://github.com/hal0zer0/openwurli?rev=c05403b9b60f95b4908ae19727682e81803a7351)",

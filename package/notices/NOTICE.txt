@@ -19,5 +19,5 @@ Authors, distributed under the SIL Open Font License 1.1 (Barlow-OFL.txt).
 Source revision dc2940e2e04ef4ec96c07e23e0f02aefbddd343b.
 https://github.com/jpt/barlow
 
-The companion RF-EPiano 0.1.4 source archive contains the adapter,
+The companion RF-EPiano 0.1.5 source archive contains the adapter,
 vendored DSP, upstream notices, locked dependency pins and build instructions.

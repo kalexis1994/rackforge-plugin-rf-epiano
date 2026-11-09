@@ -9,7 +9,7 @@ $ErrorActionPreference = 'Stop'
 $repo = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '..')).Path
 $cargoToolchain = @()
 if ($Toolchain) { $cargoToolchain = @("+$Toolchain") }
-if (-not $Output) { $Output = Join-Path $repo 'artifacts/RF-EPiano-0.1.4.rfplugin' }
+if (-not $Output) { $Output = Join-Path $repo 'artifacts/RF-EPiano-0.1.5.rfplugin' }
 $Output = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($Output)
 if (-not $Output.EndsWith('.rfplugin')) { throw 'Output must end in .rfplugin.' }
 if (Test-Path -LiteralPath $Output) { throw "Package already exists: $Output" }
