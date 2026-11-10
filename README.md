@@ -2,7 +2,7 @@
 
 ![RF-EPiano instrument](package/branding/banner.png)
 
-RF-EPiano is a 200A-style reed electric piano for RackForge. Play softly for a rounded tone or dig in to hear the reed and pickup bark. The cabinet sound and tremolo are both available from the front panel.
+RF-EPiano is a reed electric piano for RackForge inspired by the Wurlitzer 200A. Play softly for a rounded tone or dig in to hear the reed and pickup bark. The cabinet sound and tremolo are both available from the front panel.
 
 ## Install
 
