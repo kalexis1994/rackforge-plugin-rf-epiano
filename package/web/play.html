@@ -29,7 +29,7 @@
           <rf-program-select label="Program" placeholder="Search RF-EPiano programs" fit="0.72"></rf-program-select>
         </div>
         <div class="controls">
-          <div class="control">
+          <div class="control" data-rackforge-parameter-index="0">
             <label for="volume">Volume</label>
             <div class="dial">
               <input id="volume" type="range" min="0" max="1" step="0.001" value="0.8" disabled>
@@ -37,7 +37,7 @@
             </div>
             <div class="readout"><span>Min</span><output for="volume" id="volume-value">80%</output><span>Max</span></div>
           </div>
-          <div class="control">
+          <div class="control" data-rackforge-parameter-index="1">
             <label for="tremolo">Tremolo</label>
             <div class="dial">
               <input id="tremolo" type="range" min="0" max="1" step="0.001" value="0.5" disabled>
@@ -45,7 +45,7 @@
             </div>
             <div class="readout"><span>Off</span><output for="tremolo" id="tremolo-value">50%</output><span>Deep</span></div>
           </div>
-          <div class="control">
+          <div class="control" data-rackforge-parameter-index="2">
             <label for="speaker">Speaker</label>
             <div class="dial">
               <input id="speaker" type="range" min="0" max="1" step="0.001" value="0" disabled>

@@ -92,11 +92,11 @@ class Handler(SimpleHTTPRequestHandler):
             self.send_header("Content-Type", "text/html; charset=utf-8")
             self.end_headers()
             self.wfile.write(self.fixture)
-        elif self.path == "/rackforge-plugin-kit/program-select.js":
+        elif self.path in self.kit:
             self.send_response(200)
             self.send_header("Content-Type", "text/javascript; charset=utf-8")
             self.end_headers()
-            self.wfile.write(self.kit)
+            self.wfile.write(self.kit[self.path])
         else:
             super().do_GET()
 
@@ -121,8 +121,13 @@ def main():
     if not args.kit.is_file():
         parser.error("Build RackForge's web UI or pass --kit with its compiled program-select.js")
     catalog = json.loads((args.package / "metadata/presets.json").read_text(encoding="utf-8"))
+    schema = json.loads((args.package / "metadata/parameters.json").read_text(encoding="utf-8"))
     fixture = FIXTURE.replace(b"__CATALOG__", json.dumps(catalog).replace("<", "\\u003c").encode())
-    handler = partial(Handler, directory=str(args.package), fixture=fixture, kit=args.kit.read_bytes())
+    kit = {"/rackforge-plugin-kit/program-select.js": args.kit.read_bytes()}
+    host_link = args.kit.with_name("hostLink.js")
+    if host_link.is_file():
+        kit["/rackforge-plugin-kit/hostLink.js"] = host_link.read_bytes()
+    handler = partial(Handler, directory=str(args.package), fixture=fixture, kit=kit)
     args.screenshots.mkdir(parents=True, exist_ok=True)
     with ThreadingHTTPServer(("127.0.0.1", 0), handler) as server:
         Thread(target=server.serve_forever, daemon=True).start()
@@ -145,6 +150,10 @@ def main():
                 }""")
                 sliders = [panel.get_by_role("slider", name=name) for name in ("Volume", "Tremolo", "Speaker")]
                 assert [s.input_value() for s in sliders] == ["0.72", "0.35", "0.2"]
+                parameter_marker = "data-rackforge-parameter-index"
+                for parameter in schema["parameters"]:
+                    control = panel.locator(f'[{parameter_marker}="{parameter["index"]}"]')
+                    assert control.get_by_role("slider", name=parameter["name"], exact=True).count() == 1
                 for index, slider in enumerate(sliders):
                     slider.press("ArrowRight")
                     page.wait_for_function(f"writes.some(([index, value]) => index === {index})")
