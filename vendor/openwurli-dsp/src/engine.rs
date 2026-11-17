@@ -31,7 +31,7 @@ const MAX_BLOCK_SIZE: usize = 8192;
 pub enum VoiceState {
     Free,
     Held,
-    /// Key released while sustain pedal was down — reed rings undamped.
+    /// Key released under the pedal, with partial or fully lifted dampers.
     Sustained,
     Releasing,
 }
@@ -41,6 +41,9 @@ struct VoiceSlot {
     state: VoiceState,
     midi_note: u8,
     age: u64,
+    /// A normal key-up may be caught by the pedal. Forced releases and the
+    /// old voice of a re-strike must finish damping independently.
+    pedal_releasable: bool,
     /// Voice being faded out from stealing (5 ms linear crossfade).
     steal_voice: Option<Voice>,
     steal_fade: u32,
@@ -54,9 +57,28 @@ impl Default for VoiceSlot {
             state: VoiceState::Free,
             midi_note: 0,
             age: 0,
+            pedal_releasable: false,
             steal_voice: None,
             steal_fade: 0,
             steal_fade_len: 0,
+        }
+    }
+}
+
+impl VoiceSlot {
+    fn release_key(&mut self, sustain_level: f64) {
+        self.pedal_releasable = true;
+        self.state = if sustain_level > 0.0 {
+            VoiceState::Sustained
+        } else {
+            VoiceState::Releasing
+        };
+        if let Some(voice) = &mut self.voice {
+            if sustain_level > 0.0 {
+                voice.set_damper_pressure((1.0 - sustain_level).powi(2));
+            } else {
+                voice.note_off();
+            }
         }
     }
 }
@@ -196,6 +218,7 @@ pub struct WurliEngine {
 
     // MIDI state
     sustain_held: bool,
+    sustain_level: f64,
     mlp_enabled: bool,
     /// Per-voice calibration handed to each note-on. Only the hammer-contact and damper
     /// multipliers are host-settable; the rest stays at the shipping defaults.
@@ -264,6 +287,7 @@ impl WurliEngine {
         self.c9_alpha = state.c9_alpha;
         self.age_counter = 0;
         self.sustain_held = false;
+        self.sustain_level = 0.0;
         self.volume.snap_to(self.volume.target);
         self.tremolo_depth.snap_to(self.tremolo_depth.target);
         self.speaker_character.snap_to(self.speaker_character.target);
@@ -308,6 +332,7 @@ impl WurliEngine {
             os_sample_rate: os_sr,
             oversample,
             sustain_held: false,
+            sustain_level: 0.0,
             mlp_enabled: false,
             voicing: tables::CalibrationConfig::default(),
             volume: LinearSmoother::new(0.8, ramp),
@@ -332,6 +357,7 @@ impl WurliEngine {
         self.speaker.reset();
         self.age_counter = 0;
         self.sustain_held = false;
+        self.sustain_level = 0.0;
         // Snap smoothers so a ramp doesn't survive a transport reset.
         self.volume.snap_to(self.volume.target);
         self.tremolo_depth.snap_to(self.tremolo_depth.target);
@@ -395,6 +421,7 @@ impl WurliEngine {
         for slot in &mut self.voices {
             if slot.state == VoiceState::Sustained && slot.midi_note == note {
                 slot.state = VoiceState::Releasing;
+                slot.pedal_releasable = false;
                 if let Some(ref mut voice) = slot.voice {
                     voice.note_off();
                 }
@@ -421,6 +448,7 @@ impl WurliEngine {
             &self.voicing,
         ));
         slot.state = VoiceState::Held;
+        slot.pedal_releasable = false;
         slot.midi_note = note;
         slot.age = self.age_counter;
     }
@@ -435,14 +463,7 @@ impl WurliEngine {
             .min_by_key(|(_, s)| s.age)
             .map(|(i, _)| i);
         if let Some(idx) = oldest_idx {
-            if self.sustain_held {
-                self.voices[idx].state = VoiceState::Sustained;
-            } else {
-                self.voices[idx].state = VoiceState::Releasing;
-                if let Some(ref mut voice) = self.voices[idx].voice {
-                    voice.note_off();
-                }
-            }
+            self.voices[idx].release_key(self.sustain_level);
         }
     }
 
@@ -455,17 +476,9 @@ impl WurliEngine {
     /// of a note, and a key can hold several (re-strikes without a note-off,
     /// and out-of-range notes clamped onto the keyboard's end keys).
     pub fn release_all_keys(&mut self) {
-        let sustain = self.sustain_held;
         for slot in &mut self.voices {
             if slot.state == VoiceState::Held {
-                if sustain {
-                    slot.state = VoiceState::Sustained;
-                } else {
-                    slot.state = VoiceState::Releasing;
-                    if let Some(ref mut voice) = slot.voice {
-                        voice.note_off();
-                    }
-                }
+                slot.release_key(self.sustain_level);
             }
         }
     }
@@ -480,6 +493,7 @@ impl WurliEngine {
     /// host "release everything" request.
     pub fn all_notes_off(&mut self) {
         for slot in &mut self.voices {
+            slot.pedal_releasable = false;
             if matches!(slot.state, VoiceState::Held | VoiceState::Sustained) {
                 slot.state = VoiceState::Releasing;
                 if let Some(ref mut voice) = slot.voice {
@@ -534,18 +548,36 @@ impl WurliEngine {
     }
 
     pub fn set_sustain(&mut self, held: bool) {
-        if self.sustain_held && !held {
-            // Pedal release: damp every voice that was held by the pedal.
-            for slot in &mut self.voices {
-                if slot.state == VoiceState::Sustained {
-                    slot.state = VoiceState::Releasing;
-                    if let Some(ref mut voice) = slot.voice {
-                        voice.note_off();
-                    }
+        self.set_sustain_level(if held { 1.0 } else { 0.0 });
+    }
+
+    /// Continuous CC64 travel. The provisional squared curve turns pedal lift
+    /// into felt pressure while the reed retains its per-mode damping rates.
+    pub fn set_sustain_level(&mut self, level: f64) -> bool {
+        if !level.is_finite() || !(0.0..=1.0).contains(&level) {
+            return false;
+        }
+        if level == self.sustain_level {
+            return true;
+        }
+        self.sustain_level = level;
+        self.sustain_held = level > 0.0;
+        let pressure = (1.0 - level).powi(2);
+        for slot in &mut self.voices {
+            if slot.pedal_releasable
+                && matches!(slot.state, VoiceState::Sustained | VoiceState::Releasing)
+            {
+                slot.state = if self.sustain_held {
+                    VoiceState::Sustained
+                } else {
+                    VoiceState::Releasing
+                };
+                if let Some(voice) = &mut slot.voice {
+                    voice.set_damper_pressure(pressure);
                 }
             }
         }
-        self.sustain_held = held;
+        true
     }
 
     // ── Param setters ────────────────────────────────────────────────────
@@ -902,6 +934,7 @@ impl WurliEngine {
     #[doc(hidden)]
     pub fn force_sustain_held(&mut self, held: bool) {
         self.sustain_held = held;
+        self.sustain_level = if held { 1.0 } else { 0.0 };
     }
 
     #[doc(hidden)]
@@ -1491,6 +1524,30 @@ mod tests {
             e.render(chunk);
         }
         out
+    }
+
+    #[test]
+    fn test_half_pedal_recaptures_only_normal_key_releases() {
+        let mut e = engine();
+        e.note_on(60, 0.8);
+        render_samples(&mut e, 512);
+        e.note_off(60);
+        assert_eq!(e.voices.iter().filter(|slot| slot.state == VoiceState::Releasing).count(), 1);
+        assert!(e.set_sustain_level(0.75));
+        assert_eq!(e.sustained_voice_count(), 1);
+        e.note_on(60, 0.8);
+        assert!(e.set_sustain_level(0.5));
+        assert_eq!(e.sustained_voice_count(), 0);
+        assert_eq!(e.voices.iter().filter(|slot| slot.state == VoiceState::Releasing).count(), 1);
+        e.release_all_keys();
+        assert_eq!(e.sustained_voice_count(), 1);
+        e.all_notes_off();
+        assert!(e.set_sustain_level(0.9));
+        assert_eq!(e.sustained_voice_count(), 0);
+        assert!(!e.set_sustain_level(f64::NAN));
+        assert!(!e.set_sustain_level(-0.1));
+        assert!(!e.set_sustain_level(1.1));
+        assert_eq!(e.sustain_level, 0.9);
     }
 
     #[test]

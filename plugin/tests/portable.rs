@@ -11,14 +11,62 @@ enum Cue {
     Parameter(u32, f64),
 }
 
-#[test]
-fn package_component_preserves_openwurli_sound_and_state() {
-    let path = env::var_os("RF_EPIANO_COMPONENT")
+fn component_path() -> PathBuf {
+    env::var_os("RF_EPIANO_COMPONENT")
         .map(PathBuf::from)
         .unwrap_or_else(|| {
             PathBuf::from(env!("CARGO_MANIFEST_DIR"))
                 .join("../target/wasm32-unknown-unknown/release/rackforge_rf_epiano.wasm")
-        });
+        })
+}
+
+#[test]
+fn component_keeps_intermediate_pedal_positions_during_the_release() {
+    use rackforge_plugin_sdk::{MidiEvent as NativeMidiEvent, Processor};
+    use rackforge_rf_epiano::EPiano;
+
+    let path = component_path();
+    let runtime = PortableEngine::new(RuntimeLimits::default()).unwrap();
+    let module = runtime.compile(&fs::read(path).unwrap()).unwrap();
+    let mut component = module.instantiate().unwrap();
+    let mut native = EPiano::default();
+    assert!(native.prepare(48_000.0, 4096, 0, 2));
+    component.prepare(48_000.0, 4096, 0, 2).unwrap();
+    assert!(native.load_preset("direct"));
+    component.load_preset("direct").unwrap();
+    let mut actual = [0.0; 8192];
+    let mut expected = [0.0; 8192];
+    for block in 0..8 {
+        let events = match block {
+            0 => vec![
+                NativeMidiEvent::new(17, [0x90, 60, 90], 3).unwrap(),
+                NativeMidiEvent::new(2000, [0xb0, 64, 48], 3).unwrap(),
+                NativeMidiEvent::new(3000, [0x80, 60, 0], 3).unwrap(),
+            ],
+            1 => vec![NativeMidiEvent::new(777, [0xb0, 64, 96], 3).unwrap()],
+            2 => vec![NativeMidiEvent::new(123, [0xb0, 64, 127], 3).unwrap()],
+            4 => vec![NativeMidiEvent::new(71, [0xb0, 64, 64], 3).unwrap()],
+            6 => vec![NativeMidiEvent::new(256, [0xb0, 64, 0], 3).unwrap()],
+            _ => vec![],
+        };
+        let portable: Vec<_> = events
+            .iter()
+            .map(|event| MidiEvent::new(event.frame, &event.data).unwrap())
+            .collect();
+        native.process(&[], &mut expected, &events, &[], 4096, 0, 2);
+        component
+            .process_interleaved_with_events(&[], &mut actual, 4096, &portable, &[])
+            .unwrap();
+        for (actual, expected) in actual.iter().zip(expected) {
+            assert!(actual.is_finite());
+            assert!((actual - expected).abs() < 2e-6);
+        }
+    }
+}
+
+#[test]
+fn package_component_preserves_openwurli_sound_and_state() {
+    let path = component_path();
     let engine = PortableEngine::new(RuntimeLimits::default()).unwrap();
     let module = engine
         .compile(&fs::read(&path).unwrap_or_else(|error| {

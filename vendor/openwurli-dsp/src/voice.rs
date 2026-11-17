@@ -234,6 +234,15 @@ impl Voice {
             .start_damper(self.midi_note, self.sample_rate, self.damper_scale);
     }
 
+    pub fn set_damper_pressure(&mut self, pressure: f64) {
+        self.reed.set_damper_pressure(
+            self.midi_note,
+            self.sample_rate,
+            self.damper_scale,
+            pressure,
+        );
+    }
+
     /// Render samples into the output buffer.
     /// Buffer is cleared first, then filled with the voice output.
     pub fn render(&mut self, output: &mut [f64]) {
@@ -254,7 +263,8 @@ impl Voice {
     /// Check if the voice has decayed to silence.
     /// Also returns true after 10 seconds of release (safety timeout).
     pub fn is_silent(&self) -> bool {
-        if self.reed.is_damping() && self.reed.release_seconds(self.sample_rate) > 10.0 {
+        if self.reed.damper_pressure() == 1.0 && self.reed.release_seconds(self.sample_rate) > 10.0
+        {
             return true;
         }
         self.reed.is_silent(-80.0)

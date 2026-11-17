@@ -59,7 +59,9 @@ impl EPiano {
             0x90 if value > 0 => engine.note_on(note, f32::from(value) / 127.0),
             0x80 | 0x90 => engine.note_off(note),
             0xb0 => match note {
-                64 => engine.set_sustain(value >= 64),
+                64 => {
+                    engine.set_sustain_level(f64::from(value) / 127.0);
+                }
                 120 => engine.all_sound_off(),
                 121 => engine.set_sustain(false),
                 123..=127 => engine.release_all_keys(),

@@ -17,5 +17,11 @@ Local changes for RF-EPiano:
 - Expose the existing reed swing multiplier to the RackForge adapter. The
   200A Bark program sets it to 1.5 at note-on. The default remains 1.0.
 
-The lookup tables, equations and default solver configuration are unchanged.
-The RackForge adapter uses the prepared reset for real-time operation.
+- Add continuous sustain travel, including half-pedal felt pressure and
+  recapturing released reeds. Pedal movements retain the reed envelopes and
+  the existing register-dependent damper landing time. Forced releases and
+  re-struck older voices finish damping independently of pedal movements.
+
+The RackForge adapter uses the prepared reset for real-time operation. Its
+continuous pedal extends the upstream damper model with a provisional pressure
+curve. The existing synthesis tables and circuit solver configuration are used.

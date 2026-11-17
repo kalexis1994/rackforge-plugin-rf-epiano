@@ -55,6 +55,7 @@ pub struct ModalReed {
     onset_shape_exp: f64,
     // Damper state
     damper_active: bool,
+    damper_pressure: f64,
     damper_ramp_samples: f64,
     damper_release_count: f64,
     damper_ramp_done: bool,
@@ -119,6 +120,7 @@ impl ModalReed {
             onset_ramp_inc: ramp_inc,
             onset_shape_exp,
             damper_active: false,
+            damper_pressure: 0.0,
             damper_ramp_samples: 0.0,
             damper_release_count: 0.0,
             damper_ramp_done: false,
@@ -155,6 +157,16 @@ impl ModalReed {
     /// - `sample_rate`: for time constant conversion
     /// - `damper_scale`: multiplier on the damper rates, 1.0 = shipping (the per-mode cap holds)
     pub fn start_damper(&mut self, midi_note: u8, sample_rate: f64, damper_scale: f64) {
+        self.prepare_damper(midi_note, sample_rate, damper_scale, 1.0);
+    }
+
+    fn prepare_damper(
+        &mut self,
+        midi_note: u8,
+        sample_rate: f64,
+        damper_scale: f64,
+        pressure: f64,
+    ) {
         // Top 5 keys (MIDI 92-96): no damper pads; they ring as sympathetics on the A series
         // (Doc Wurly's reed-era history, docwurly.com). Natural decay only.
         if midi_note >= 92 {
@@ -165,7 +177,7 @@ impl ModalReed {
             (55.0 * 2.0_f64.powf((midi_note as f64 - 60.0) / 24.0)).max(0.5) * damper_scale;
         for (m, mode) in self.modes.iter_mut().enumerate() {
             let factor = (base_rate * 3.0_f64.powi(m as i32)).min(2000.0);
-            mode.damper_rate = factor / sample_rate;
+            mode.damper_rate = (factor / sample_rate) * pressure;
             mode.damper_mult = (-mode.damper_rate).exp();
         }
 
@@ -179,8 +191,45 @@ impl ModalReed {
 
         self.damper_ramp_samples = ramp_time * sample_rate;
         self.damper_active = true;
+        self.damper_pressure = pressure;
         self.damper_release_count = 0.0;
         self.damper_ramp_done = false;
+    }
+
+    /// Change felt contact without restoring energy or restarting an existing
+    /// landing ramp. Zero lifts the felt completely. The upper undamped keys
+    /// keep their natural decay at every pedal position.
+    pub fn set_damper_pressure(
+        &mut self,
+        midi_note: u8,
+        sample_rate: f64,
+        damper_scale: f64,
+        pressure: f64,
+    ) -> bool {
+        if !pressure.is_finite() || !(0.0..=1.0).contains(&pressure) {
+            return false;
+        }
+        if midi_note >= 92 || pressure == self.damper_pressure {
+            return true;
+        }
+        if pressure == 0.0 {
+            self.damper_active = false;
+            self.damper_pressure = 0.0;
+            return true;
+        }
+        let active = self.damper_active;
+        let elapsed = self.damper_release_count;
+        let landed = self.damper_ramp_done;
+        self.prepare_damper(midi_note, sample_rate, damper_scale, pressure);
+        if active {
+            self.damper_release_count = elapsed;
+            self.damper_ramp_done = landed;
+        }
+        true
+    }
+
+    pub fn damper_pressure(&self) -> f64 {
+        self.damper_pressure
     }
 
     /// Render samples into the output buffer (additive, does NOT clear buffer).
@@ -290,6 +339,68 @@ impl ModalReed {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn half_pedal_changes_loss_without_restoring_motion_or_restarting_landing() {
+        let ratios = [1.0, 6.267, 17.547, 34.386, 56.842, 85.1, 119.3];
+        for rate in [44_100.0, 48_000.0, 96_000.0] {
+            let mut previous = 0.0;
+            for pressure in [1.0, 0.75, 0.25, 0.0625, 0.0] {
+                let mut reed = ModalReed::new(
+                    110.0,
+                    &ratios,
+                    &[1.0; NUM_MODES],
+                    &[1.0; NUM_MODES],
+                    0.0,
+                    1.0,
+                    rate,
+                );
+                assert!(reed.set_damper_pressure(60, rate, 1.0, pressure));
+                let mut buffer = vec![0.0; (rate * 0.2) as usize];
+                reed.render(&mut buffer);
+                let level = reed.modes[0].envelope;
+                assert!(
+                    level > previous,
+                    "non-progressive loss at {rate}/{pressure}"
+                );
+                previous = level;
+                let envelopes = reed.modes.each_ref().map(|mode| mode.envelope);
+                let elapsed = reed.damper_release_count;
+                let landed = reed.damper_ramp_done;
+                assert!(reed.set_damper_pressure(60, rate, 1.0, 0.5));
+                assert_eq!(reed.modes.each_ref().map(|mode| mode.envelope), envelopes);
+                if pressure > 0.0 {
+                    assert_eq!(reed.damper_release_count, elapsed);
+                    assert_eq!(reed.damper_ramp_done, landed);
+                }
+                reed.render(&mut buffer);
+                for (mode, before) in reed.modes.iter().zip(envelopes) {
+                    assert!(mode.envelope <= before);
+                }
+                assert!(!reed.set_damper_pressure(60, rate, 1.0, f64::NAN));
+            }
+        }
+    }
+
+    #[test]
+    fn continuous_pedal_keeps_the_top_five_reeds_undamped() {
+        let ratios = [1.0, 6.267, 17.547, 34.386, 56.842, 85.1, 119.3];
+        for note in 92..=96 {
+            let mut reed = ModalReed::new(
+                110.0,
+                &ratios,
+                &[1.0; NUM_MODES],
+                &[1.0; NUM_MODES],
+                0.0,
+                1.0,
+                48_000.0,
+            );
+            for pressure in [1.0, 0.25, 0.0] {
+                assert!(reed.set_damper_pressure(note, 48_000.0, 1.0, pressure));
+                assert!(!reed.is_damping());
+            }
+        }
+    }
 
     #[test]
     fn test_air_drag_is_amplitude_dependent() {

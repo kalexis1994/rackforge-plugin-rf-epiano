@@ -28,6 +28,8 @@ Open **RF-EPiano** in PLAY. Use the arrows in **Program memory** to step through
 
 Save your own settings under **Presets** in PLAY. You can import and export saved presets as `.rfpreset` files.
 
+A continuous sustain pedal sends MIDI CC 64 positions between 0 and 127. Partial pedal travel controls the felt pressure on released reeds, changing their decay and damping the upper partials more strongly. A held key keeps its own damper lifted. The highest five reeds ring naturally at every pedal position.
+
 RF-EPiano is based on the [OpenWurli DSP](https://github.com/hal0zer0/openwurli). The release also provides a source archive. [OpenWurli provenance](vendor/openwurli-dsp/UPSTREAM.md) · [RackForge SDK revision](https://github.com/kalexis1994/rackforge/tree/7a14c68aa208290587d985d606b0dbc17600ee07/crates/rackforge-plugin-sdk) · [Melange primitives revision](https://github.com/hal0zer0/melange/tree/7ecb36c7e237c66929a39f936734b8b5a63f128d)
 
 ## License
