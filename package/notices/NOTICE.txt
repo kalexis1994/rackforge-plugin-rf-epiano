@@ -6,7 +6,9 @@ https://github.com/hal0zer0/openwurli
 
 RF-EPiano adds a RackForge adapter and a prepared silent-state reset to
 the vendored DSP. It exposes the existing reed swing multiplier for the 200A
-Bark program. The upstream synthesis and circuit calculations are unchanged.
+Bark program. Continuous sustain extends the damper with variable felt pressure
+and recapturing of released reeds, using the existing modal damping rates.
+The upstream circuit calculations are retained.
 The bundled engine uses melange-primitives (upstream pin 7ecb36c7).
 https://github.com/hal0zer0/melange
 
@@ -19,5 +21,5 @@ Authors, distributed under the SIL Open Font License 1.1 (Barlow-OFL.txt).
 Source revision dc2940e2e04ef4ec96c07e23e0f02aefbddd343b.
 https://github.com/jpt/barlow
 
-The companion RF-EPiano 0.1.6 source archive contains the adapter,
+The companion RF-EPiano 0.1.7 source archive contains the adapter,
 vendored DSP, upstream notices, locked dependency pins and build instructions.

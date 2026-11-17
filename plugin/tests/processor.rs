@@ -50,6 +50,8 @@ fn prepared_reset_silences_sustained_notes_without_memory_operations() {
     MEMORY_OPERATIONS.with(|count| count.set(Some(0)));
     plugin.process(&[], &mut audio, &[note_on], &[], 256, 0, 2);
     plugin.process(&[], &mut audio, &[pedal, note_off], &[], 256, 0, 2);
+    let half_pedal = MidiEvent::new(0, [0xb0, 64, 64], 3).unwrap();
+    plugin.process(&[], &mut audio, &[half_pedal], &[], 256, 0, 2);
     let held_peak = audio
         .iter()
         .fold(0.0_f32, |peak, value| peak.max(value.abs()));
